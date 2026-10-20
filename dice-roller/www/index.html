@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14201A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Dice Roller</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="Dice Roller">
+<meta name="description" content="Roll any mix of d4 to d20 dice and keep a history of every roll.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1712;
+    --felt:#14201A;
+    --surface:#1B2A22;
+    --surface-2:#233529;
+    --tray:#182620;
+    --ink:#F2ECDD;
+    --ink-dim:#9FB2A4;
+    --ink-faint:#6E8377;
+    --brass:#C99A3E;
+    --brass-bright:#E3B75F;
+    --brass-ink:#20160A;
+    --ember:#B0503A;
+    --ember-bright:#C96B54;
+    --line:rgba(242,236,221,0.10);
+    --line-strong:rgba(242,236,221,0.20);
+    --die-fill:#0D1310;
+    --die-stroke:rgba(242,236,221,0.16);
+    --radius:14px;
+    --shadow:0 12px 28px rgba(0,0,0,0.35);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      repeating-linear-gradient(115deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px),
+      radial-gradient(ellipse at 50% -10%, #1c2c22 0%, var(--felt) 55%, var(--bg) 100%);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:0;
+  }
+  .app-frame{
+    width:100%;
+    max-width:460px;
+    min-height:100vh;
+    background:var(--bg);
+    display:flex;
+    flex-direction:column;
+    position:relative;
+    box-shadow:var(--shadow);
+    border-left:1px solid var(--line);
+    border-right:1px solid var(--line);
+  }
+  @media (min-width:461px){
+    body{padding:32px 16px;}
+    .app-frame{min-height:calc(100vh - 64px); border-radius:22px; overflow:hidden; border:1px solid var(--line-strong);}
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:18px 18px 14px;
+    border-bottom:1px solid var(--line);
+    flex:0 0 auto;
+  }
+  .icon-btn{
+    width:38px;height:38px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--surface);
+    color:var(--ink-dim);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .icon-btn:active{background:var(--surface-2);}
+  header h1{
+    font-family:'Oswald', sans-serif;
+    font-weight:600;
+    font-size:20px;
+    letter-spacing:0.02em;
+    margin:0;
+  }
+  .logo-mark svg{width:20px;height:20px;display:block;}
+
+  /* ---------- Screens ---------- */
+  main{flex:1 1 auto; display:flex; flex-direction:column; min-height:0;}
+  .screen{display:none; flex-direction:column; flex:1 1 auto; min-height:0; padding:18px; gap:16px;}
+  .screen.active{display:flex;}
+
+  .screen-title{
+    font-family:'Oswald', sans-serif;
+    font-weight:600;
+    font-size:26px;
+    margin:2px 0 0;
+    letter-spacing:0.01em;
+  }
+  .screen-sub{
+    color:var(--ink-dim);
+    font-size:14px;
+    line-height:1.5;
+    margin:0;
+  }
+
+  /* ---------- Home / tray ---------- */
+  .tray-status{
+    display:flex; align-items:baseline; justify-content:space-between;
+    gap:8px;
+  }
+  .tray-count{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--ink-faint);
+  }
+  .link-btn{
+    background:none;border:none;color:var(--ember-bright);
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
+    cursor:pointer; padding:4px 2px;
+  }
+  .link-btn:disabled{opacity:0.35; cursor:default;}
+
+  .tray{
+    flex:1 1 auto;
+    min-height:180px;
+    background:var(--tray);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:14px;
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(76px, 1fr));
+    gap:10px;
+    align-content:start;
+    overflow-y:auto;
+  }
+  .tray-empty{
+    grid-column:1/-1;
+    align-self:center; justify-self:center;
+    text-align:center;
+    color:var(--ink-faint);
+    font-size:14px;
+    padding:20px;
+  }
+  .die-tile{
+    position:relative;
+    aspect-ratio:1/1;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    padding:6px;
+  }
+  .die-tile .die-tag{
+    position:absolute;
+    bottom:3px; right:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9px;
+    color:var(--ink-faint);
+    letter-spacing:0.02em;
+  }
+  .die-remove{
+    position:absolute; top:-6px; right:-6px;
+    width:20px;height:20px;border-radius:50%;
+    background:var(--ember);
+    color:#fff;
+    border:2px solid var(--bg);
+    font-size:12px; line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+  }
+  .die-svg{width:100%; height:100%;}
+  .die-svg .face-poly, .die-svg .face-rect{fill:var(--die-fill); stroke:var(--die-stroke); stroke-width:2.5;}
+  .die-svg .face-spoke{stroke:var(--die-stroke); stroke-width:1.4;}
+  .die-svg .face-num{
+    fill:var(--ink-faint);
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    text-anchor:middle;
+    dominant-baseline:central;
+  }
+  .die-tile.has-value .die-svg .face-num{fill:var(--brass-bright); font-weight:600;}
+  .die-tile.has-value .die-svg .face-poly, .die-tile.has-value .die-svg .face-rect{stroke:rgba(227,183,95,0.55);}
+
+  .die-tile.rolling{animation:diceWobble 0.32s ease-in-out infinite;}
+  @keyframes diceWobble{
+    0%{transform:rotate(0deg) scale(1);}
+    25%{transform:rotate(-8deg) scale(1.03);}
+    50%{transform:rotate(0deg) scale(0.98);}
+    75%{transform:rotate(8deg) scale(1.03);}
+    100%{transform:rotate(0deg) scale(1);}
+  }
+  .die-tile.settle{animation:diceSettle 0.28s ease-out;}
+  @keyframes diceSettle{
+    0%{transform:scale(1.22);}
+    60%{transform:scale(0.94);}
+    100%{transform:scale(1);}
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    font-family:'Oswald', sans-serif;
+    font-weight:600;
+    font-size:16px;
+    letter-spacing:0.03em;
+    border-radius:12px;
+    border:none;
+    padding:15px 18px;
+    cursor:pointer;
+    text-align:center;
+    -webkit-tap-highlight-color:transparent;
+    transition:transform 0.08s ease;
+  }
+  .btn:active{transform:scale(0.98);}
+  .btn-primary{background:linear-gradient(180deg, var(--brass-bright), var(--brass)); color:var(--brass-ink); box-shadow:0 6px 16px rgba(201,154,62,0.25);}
+  .btn-primary:disabled{background:var(--surface-2); color:var(--ink-faint); box-shadow:none; cursor:default;}
+  .btn-secondary{background:var(--surface); color:var(--ink); border:1px solid var(--line-strong);}
+  .btn-secondary:disabled{color:var(--ink-faint); border-color:var(--line); cursor:default;}
+  .btn-row{display:flex; gap:10px;}
+  .btn-row .btn{flex:1;}
+  .actions{display:flex; flex-direction:column; gap:10px; flex:0 0 auto;}
+
+  /* ---------- Add Die screen ---------- */
+  .die-picker{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:12px;
+    overflow-y:auto;
+    padding:2px;
+  }
+  .die-option{
+    background:var(--surface);
+    border:1.5px solid var(--line);
+    border-radius:var(--radius);
+    padding:14px 10px 10px;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    cursor:pointer;
+  }
+  .die-option .die-svg-wrap{width:76px; height:76px;}
+  .die-option .die-label{font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--ink-dim); font-weight:600;}
+  .die-option.selected{
+    border-color:var(--brass);
+    background:linear-gradient(180deg, rgba(201,154,62,0.14), rgba(201,154,62,0.04));
+    box-shadow:0 0 0 1px rgba(201,154,62,0.35) inset;
+  }
+  .die-option.selected .die-label{color:var(--brass-bright);}
+  .die-option.selected .die-svg .face-poly, .die-option.selected .die-svg .face-rect{stroke:var(--brass-bright);}
+
+  .qty-row{
+    display:flex; align-items:center; justify-content:center; gap:18px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:10px;
+    flex:0 0 auto;
+  }
+  .qty-row.disabled{opacity:0.4; pointer-events:none;}
+  .qty-btn{
+    width:40px;height:40px;border-radius:10px;
+    background:var(--surface-2); color:var(--ink);
+    border:1px solid var(--line-strong);
+    font-size:18px; font-weight:600;
+    cursor:pointer;
+  }
+  .qty-btn:active{background:var(--tray);}
+  .qty-value{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:20px; font-weight:600;
+    min-width:34px; text-align:center;
+  }
+  .qty-caption{font-size:12px; color:var(--ink-faint); text-align:center; flex:0 0 auto; margin-top:-6px;}
+
+  /* ---------- History ---------- */
+  .history-list{flex:1 1 auto; overflow-y:auto; display:flex; flex-direction:column; gap:8px;}
+  .history-empty{color:var(--ink-faint); font-size:14px; text-align:center; padding:30px 10px;}
+  .history-row{
+    display:flex; align-items:center; gap:10px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px 12px;
+  }
+  .history-row .hr-time{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-faint); width:64px; flex:0 0 auto;
+  }
+  .history-row .hr-mid{flex:1 1 auto; min-width:0;}
+  .history-row .hr-dice{font-size:13px; color:var(--ink); font-weight:500;}
+  .history-row .hr-total{
+    font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:15px; color:var(--brass-bright);
+    width:44px; text-align:right; flex:0 0 auto;
+  }
+  .history-row .hr-btn{
+    flex:0 0 auto;
+    background:var(--surface-2); color:var(--ink-dim);
+    border:1px solid var(--line-strong);
+    border-radius:8px; padding:8px 10px; font-size:12px; font-family:'Inter',sans-serif; font-weight:600;
+    cursor:pointer;
+  }
+
+  .summary-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px 14px;
+    display:flex; justify-content:space-between; gap:10px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    flex:0 0 auto;
+  }
+  .summary-card div span{display:block; color:var(--ink-faint); font-size:10px; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:3px; font-family:'Inter',sans-serif;}
+  .summary-card .sc-total{color:var(--brass-bright); font-weight:600; font-size:18px;}
+
+  .detail-list{flex:1 1 auto; overflow-y:auto; display:flex; flex-direction:column; gap:8px;}
+  .detail-row{
+    display:flex; align-items:center; gap:14px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:10px 14px;
+  }
+  .detail-row .dr-num{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:26px; font-weight:600; color:var(--ink);
+    width:44px; flex:0 0 auto;
+  }
+  .detail-row .dr-die{width:52px; height:52px; flex:0 0 auto;}
+  .detail-row .dr-label{color:var(--ink-faint); font-size:12px; flex:1;}
+
+  footer.actions{padding:0 18px 18px;}
+  .screen > footer.actions{padding:0;}
+
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:var(--line-strong); border-radius:3px;}
+
+  .about-panel{
+    position:absolute; inset:0;
+    background:rgba(6,10,8,0.72);
+    backdrop-filter:blur(2px);
+    display:none;
+    align-items:flex-start; justify-content:center;
+    padding:18px; z-index:20;
+  }
+  .about-panel.open{display:flex;}
+  .about-card{
+    margin-top:60px;
+    background:var(--surface);
+    border:1px solid var(--line-strong);
+    border-radius:14px;
+    padding:18px;
+    max-width:360px;
+    width:100%;
+    box-shadow:var(--shadow);
+  }
+  .about-card h2{font-family:'Oswald',sans-serif; font-size:18px; margin:0 0 8px;}
+  .about-card p{font-size:13px; color:var(--ink-dim); line-height:1.6; margin:0 0 10px;}
+  .about-card p:last-of-type{margin-bottom:14px;}
+</style>
+</head>
+<body>
+<div class="app-frame" id="appFrame">
+
+  <header>
+    <button class="icon-btn" id="menuBtn" aria-label="About">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 4.5H16M2 9H16M2 13.5H16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+    <h1>Dice Roller</h1>
+    <div class="icon-btn logo-mark" aria-hidden="true">
+      <svg viewBox="0 0 100 100"><polygon class="face-poly" points="" id="logoHex" fill="var(--die-fill)" stroke="var(--brass)" stroke-width="6"/></svg>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- HOME -->
+    <section class="screen" id="screen-home">
+      <div>
+        <p class="screen-sub" id="homeSub">Choose your dice to roll.</p>
+      </div>
+      <div class="tray-status">
+        <span class="tray-count" id="trayCount">0 / 20 dice</span>
+        <button class="link-btn" id="clearTrayBtn" disabled>Clear tray</button>
+      </div>
+      <div class="tray" id="tray"></div>
+      <div class="actions">
+        <button class="btn btn-primary" id="rollBtn" disabled>Roll!</button>
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="addDieBtn">Add Die</button>
+          <button class="btn btn-secondary" id="historyBtn" disabled>History</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ADD DIE -->
+    <section class="screen" id="screen-add">
+      <h2 class="screen-title">Pick a die</h2>
+      <p class="screen-sub">Tap a die to select it, choose how many, then add it to your tray.</p>
+      <div class="die-picker" id="diePicker"></div>
+      <div class="qty-row disabled" id="qtyRow">
+        <button class="qty-btn" id="qtyMinus">−</button>
+        <span class="qty-value" id="qtyValue">1</span>
+        <button class="qty-btn" id="qtyPlus">+</button>
+      </div>
+      <p class="qty-caption" id="qtyCaption">Select a die to set quantity</p>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="addBackBtn">&lt; Back</button>
+        <button class="btn btn-primary" id="addConfirmBtn" disabled>Add</button>
+      </div>
+    </section>
+
+    <!-- HISTORY -->
+    <section class="screen" id="screen-history">
+      <h2 class="screen-title">History</h2>
+      <p class="screen-sub">Every roll this session, most recent first.</p>
+      <div class="history-list" id="historyList"></div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="historyBackBtn">&lt; Back</button>
+        <button class="btn btn-secondary" id="clearHistoryBtn">Clear history</button>
+      </div>
+    </section>
+
+    <!-- DETAIL -->
+    <section class="screen" id="screen-detail">
+      <h2 class="screen-title">Roll details</h2>
+      <div class="summary-card" id="detailSummary"></div>
+      <div class="detail-list" id="detailList"></div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="detailBackBtn">&lt; Back</button>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="about-panel" id="aboutPanel">
+    <div class="about-card">
+      <h2>About Dice Roller</h2>
+      <p>Add up to <strong id="aboutMax">20</strong> dice of any mix — d4 through d20 — arrange your tray, then roll. Every roll is timestamped and saved to History for this session.</p>
+      <p>The dice limit is a single constant in the code (<code>MAX_DICE</code>), so it's easy to raise or lower later.</p>
+      <button class="btn btn-secondary" id="aboutCloseBtn" style="width:100%;">Close</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ CONFIG ============ */
+  // Change this single constant to allow more or fewer dice per roll.
+  const MAX_DICE = 20;
+  const DIE_TYPES = [4, 6, 8, 10, 12, 20];
+
+  /* ============ STATE ============ */
+  let state = {
+    screen: 'home',
+    tray: [],           // { id, sides, value }
+    history: [],        // { id, time, entries:[{sides,value}], total, notation }
+    selectedType: null,
+    qty: 1,
+    detailId: null,
+    rolling: false
+  };
+  let nextDieId = 1;
+  let nextRollId = 1;
+
+  /* ============ DIE GEOMETRY ============ */
+  function regularPolygon(n, r, cx, cy, rotationDeg){
+    const pts = [];
+    const rot = (rotationDeg || -90) * Math.PI / 180;
+    for(let i=0;i<n;i++){
+      const a = rot + (i * 2 * Math.PI / n);
+      pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+    }
+    return pts;
+  }
+  function ptsToStr(pts){ return pts.map(p => p[0].toFixed(1)+','+p[1].toFixed(1)).join(' '); }
+
+  function diePolygon(sides){
+    switch(sides){
+      case 4:  return { pts: [[50,8],[92,88],[8,88]], spokes:false };
+      case 6:  return { rect: true };
+      case 8:  return { pts: [[50,4],[96,50],[50,96],[4,50]], spokes:false };
+      case 10: return { pts: [[50,4],[91,37],[74,96],[26,96],[9,37]], spokes:false };
+      case 12: return { pts: regularPolygon(12, 45, 50, 50, -90), spokes:true };
+      case 20: return { pts: regularPolygon(6, 45, 50, 50, -90), spokes:true };
+      default: return { pts: regularPolygon(6, 45, 50, 50, -90), spokes:false };
+    }
+  }
+
+  function dieSVG(sides, opts){
+    opts = opts || {};
+    const value = (opts.value === undefined) ? null : opts.value;
+    const shape = diePolygon(sides);
+    const fontSize = value !== null ? 34 : 22;
+    const label = value !== null ? String(value) : ('d'+sides);
+    let shapeMarkup = '';
+    if(shape.rect){
+      shapeMarkup = '<rect class="face-rect" x="10" y="10" width="80" height="80" rx="10"/>';
+    } else {
+      shapeMarkup = '<polygon class="face-poly" points="'+ptsToStr(shape.pts)+'"/>';
+      if(shape.spokes){
+        shapeMarkup += shape.pts.map(p => '<line class="face-spoke" x1="50" y1="50" x2="'+p[0].toFixed(1)+'" y2="'+p[1].toFixed(1)+'"/>').join('');
+      }
+    }
+    return '<svg class="die-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">'
+      + shapeMarkup
+      + '<text class="face-num" x="50" y="54" font-size="'+fontSize+'">'+label+'</text>'
+      + '</svg>';
+  }
+
+  // build the header logo (small d20 outline)
+  (function initLogo(){
+    const hex = document.getElementById('logoHex');
+    hex.setAttribute('points', ptsToStr(regularPolygon(6, 40, 50, 50, -90)));
+  })();
+
+  /* ============ HELPERS ============ */
+  function trayCount(){ return state.tray.length; }
+  function randInt(sides){ return 1 + Math.floor(Math.random() * sides); }
+
+  function formatTime(d){
+    let h = d.getHours(), m = d.getMinutes();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if(h === 0) h = 12;
+    const mm = m < 10 ? '0'+m : String(m);
+    return h+':'+mm+' '+ampm;
+  }
+
+  function notationFor(entries){
+    const counts = {};
+    entries.forEach(e => { counts[e.sides] = (counts[e.sides]||0) + 1; });
+    return Object.keys(counts)
+      .map(Number)
+      .sort((a,b) => b - a)
+      .map(s => counts[s]+'d'+s)
+      .join(', ');
+  }
+
+  function el(id){ return document.getElementById(id); }
+
+  /* ============ NAVIGATION ============ */
+  function navigate(screen){
+    state.screen = screen;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    el('screen-'+screen).classList.add('active');
+    render();
+  }
+
+  /* ============ RENDER: HOME ============ */
+  function renderHome(){
+    const count = trayCount();
+    el('trayCount').textContent = count + ' / ' + MAX_DICE + ' dice';
+    el('clearTrayBtn').disabled = count === 0 || state.rolling;
+    el('rollBtn').disabled = count === 0 || state.rolling;
+    el('historyBtn').disabled = state.history.length === 0;
+    el('addDieBtn').disabled = count >= MAX_DICE || state.rolling;
+
+    if(state.rolling){
+      el('homeSub').textContent = 'Rolling…';
+    } else if(count === 0){
+      el('homeSub').textContent = 'Choose your dice to roll.';
+    } else {
+      const lastRolled = state.tray.some(d => d.value !== null);
+      el('homeSub').textContent = lastRolled
+        ? 'Total: ' + state.tray.reduce((s,d) => s + (d.value||0), 0) + '  ·  Tap Add Die for more, or Roll again.'
+        : notationFor(state.tray.map(d=>({sides:d.sides}))) + ' ready to roll.';
+    }
+
+    const tray = el('tray');
+    if(count === 0){
+      tray.innerHTML = '<div class="tray-empty">Your tray is empty.<br>Tap <strong>Add Die</strong> to get started.</div>';
+      return;
+    }
+    tray.innerHTML = state.tray.map(d => {
+      const hasValue = d.value !== null;
+      return '<div class="die-tile'+(hasValue?' has-value':'')+'" data-die-id="'+d.id+'" id="tile-'+d.id+'">'
+        + (!state.rolling ? '<div class="die-remove" data-remove-id="'+d.id+'">&times;</div>' : '')
+        + dieSVG(d.sides, { value: d.value })
+        + '<span class="die-tag">d'+d.sides+'</span>'
+        + '</div>';
+    }).join('');
+
+    if(!state.rolling){
+      tray.querySelectorAll('.die-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = Number(btn.getAttribute('data-remove-id'));
+          state.tray = state.tray.filter(d => d.id !== id);
+          renderHome();
+        });
+      });
+    }
+  }
+
+  /* ============ RENDER: ADD DIE ============ */
+  function renderAdd(){
+    const remaining = MAX_DICE - trayCount();
+    const picker = el('diePicker');
+    picker.innerHTML = DIE_TYPES.map(sides => {
+      const selected = state.selectedType === sides;
+      return '<div class="die-option'+(selected?' selected':'')+'" data-type="'+sides+'">'
+        + '<div class="die-svg-wrap">'+dieSVG(sides, {})+'</div>'
+        + '<span class="die-label">d'+sides+'</span>'
+        + '</div>';
+    }).join('');
+    picker.querySelectorAll('.die-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const type = Number(opt.getAttribute('data-type'));
+        state.selectedType = type;
+        state.qty = 1;
+        renderAdd();
+      });
+    });
+
+    const qtyRow = el('qtyRow');
+    const caption = el('qtyCaption');
+    const confirmBtn = el('addConfirmBtn');
+    if(state.selectedType === null || remaining <= 0){
+      qtyRow.classList.add('disabled');
+      el('qtyValue').textContent = '1';
+      caption.textContent = remaining <= 0 ? 'Tray is full — remove a die to add another' : 'Select a die to set quantity';
+      confirmBtn.disabled = true;
+    } else {
+      qtyRow.classList.remove('disabled');
+      el('qtyValue').textContent = String(state.qty);
+      caption.textContent = 'Adding ' + state.qty + ' × d' + state.selectedType + '  ·  ' + remaining + ' slot' + (remaining===1?'':'s') + ' left in tray';
+      confirmBtn.disabled = false;
+    }
+  }
+
+  function adjustQty(delta){
+    if(state.selectedType === null) return;
+    const remaining = MAX_DICE - trayCount();
+    let next = state.qty + delta;
+    next = Math.max(1, Math.min(remaining, next));
+    state.qty = next;
+    renderAdd();
+  }
+
+  /* ============ RENDER: HISTORY ============ */
+  function renderHistory(){
+    const list = el('historyList');
+    el('clearHistoryBtn').disabled = state.history.length === 0;
+    if(state.history.length === 0){
+      list.innerHTML = '<div class="history-empty">No rolls logged yet.</div>';
+      return;
+    }
+    list.innerHTML = state.history.map(r => (
+      '<div class="history-row">'
+      + '<span class="hr-time">'+r.time+'</span>'
+      + '<div class="hr-mid"><div class="hr-dice">'+r.notation+'</div></div>'
+      + '<span class="hr-total">'+r.total+'</span>'
+      + '<button class="hr-btn" data-detail-id="'+r.id+'">Details</button>'
+      + '</div>'
+    )).join('');
+    list.querySelectorAll('.hr-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.detailId = Number(btn.getAttribute('data-detail-id'));
+        navigate('detail');
+      });
+    });
+  }
+
+  /* ============ RENDER: DETAIL ============ */
+  function renderDetail(){
+    const roll = state.history.find(r => r.id === state.detailId);
+    if(!roll){ navigate('history'); return; }
+    el('detailSummary').innerHTML =
+      '<div><span>Time</span>'+roll.time+'</div>'
+      + '<div><span>Dice</span>'+roll.notation+'</div>'
+      + '<div><span>Total</span><span class="sc-total">'+roll.total+'</span></div>';
+    el('detailList').innerHTML = roll.entries.map(e => (
+      '<div class="detail-row">'
+      + '<span class="dr-num">'+e.value+'</span>'
+      + '<div class="dr-die">'+dieSVG(e.sides, {value:e.value})+'</div>'
+      + '<span class="dr-label">rolled on a d'+e.sides+'</span>'
+      + '</div>'
+    )).join('');
+  }
+
+  /* ============ RENDER DISPATCH ============ */
+  function render(){
+    if(state.screen === 'home') renderHome();
+    else if(state.screen === 'add') renderAdd();
+    else if(state.screen === 'history') renderHistory();
+    else if(state.screen === 'detail') renderDetail();
+  }
+
+  /* ============ ACTIONS ============ */
+  function addDiceToTray(sides, qty){
+    const remaining = MAX_DICE - trayCount();
+    const n = Math.max(0, Math.min(qty, remaining));
+    for(let i=0;i<n;i++){
+      state.tray.push({ id: nextDieId++, sides: sides, value: null });
+    }
+  }
+
+  function clearTray(){
+    state.tray = [];
+    renderHome();
+  }
+
+  function rollAll(){
+    if(state.tray.length === 0 || state.rolling) return;
+    state.rolling = true;
+    renderHome();
+
+    const dice = state.tray;
+    const flickerTimers = [];
+    const finalValues = dice.map(d => randInt(d.sides));
+
+    dice.forEach((d, i) => {
+      const tile = el('tile-'+d.id);
+      if(!tile) return;
+      tile.classList.add('rolling');
+      const textEl = tile.querySelector('.face-num');
+      const flicker = setInterval(() => {
+        if(textEl) textEl.textContent = String(randInt(d.sides));
+      }, 55);
+      flickerTimers.push(flicker);
+
+      const duration = 620 + i * 70;
+      setTimeout(() => {
+        clearInterval(flicker);
+        tile.classList.remove('rolling');
+        tile.classList.add('settle');
+        d.value = finalValues[i];
+        tile.classList.add('has-value');
+        if(textEl){
+          textEl.textContent = String(d.value);
+          textEl.setAttribute('font-size', '34');
+        }
+        setTimeout(() => tile.classList.remove('settle'), 300);
+      }, duration);
+    });
+
+    const totalDuration = 620 + (dice.length - 1) * 70 + 320;
+    setTimeout(() => {
+      state.rolling = false;
+      const entries = dice.map(d => ({ sides: d.sides, value: d.value }));
+      const total = entries.reduce((s,e) => s + e.value, 0);
+      const now = new Date();
+      state.history.unshift({
+        id: nextRollId++,
+        time: formatTime(now),
+        entries: entries,
+        total: total,
+        notation: notationFor(entries)
+      });
+      renderHome();
+    }, totalDuration);
+  }
+
+  function clearHistory(){
+    state.history = [];
+    renderHistory();
+  }
+
+  /* ============ EVENT WIRING ============ */
+  el('addDieBtn').addEventListener('click', () => {
+    state.selectedType = null;
+    state.qty = 1;
+    navigate('add');
+  });
+  el('rollBtn').addEventListener('click', rollAll);
+  el('historyBtn').addEventListener('click', () => navigate('history'));
+  el('clearTrayBtn').addEventListener('click', clearTray);
+
+  el('addBackBtn').addEventListener('click', () => navigate('home'));
+  el('addConfirmBtn').addEventListener('click', () => {
+    if(state.selectedType === null) return;
+    addDiceToTray(state.selectedType, state.qty);
+    state.selectedType = null;
+    state.qty = 1;
+    navigate('home');
+  });
+  el('qtyMinus').addEventListener('click', () => adjustQty(-1));
+  el('qtyPlus').addEventListener('click', () => adjustQty(1));
+
+  el('historyBackBtn').addEventListener('click', () => navigate('home'));
+  el('clearHistoryBtn').addEventListener('click', clearHistory);
+
+  el('detailBackBtn').addEventListener('click', () => navigate('history'));
+
+  el('menuBtn').addEventListener('click', () => {
+    el('aboutMax').textContent = String(MAX_DICE);
+    el('aboutPanel').classList.add('open');
+  });
+  el('aboutCloseBtn').addEventListener('click', () => el('aboutPanel').classList.remove('open'));
+  el('aboutPanel').addEventListener('click', (e) => {
+    if(e.target.id === 'aboutPanel') el('aboutPanel').classList.remove('open');
+  });
+
+  /* ============ INIT ============ */
+  render();
+})();
+</script>
+
+<script>
+  // Offline support (only on http/https; skipped inside native wrappers and file://)
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    });
+  }
+</script>
+</body>
+</html>
