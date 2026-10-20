@@ -1,0 +1,24 @@
+{
+  "name": "dice-roller",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dice Roller: a d4-d20 dice rolling app for the browser, iOS and Android.",
+  "scripts": {
+    "serve": "npx serve www",
+    "cap:add:android": "cap add android",
+    "cap:add:ios": "cap add ios",
+    "cap:sync": "cap sync",
+    "cap:android": "cap sync android && cap open android",
+    "cap:ios": "cap sync ios && cap open ios",
+    "assets": "capacitor-assets generate"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.0.0"
+  }
+}
